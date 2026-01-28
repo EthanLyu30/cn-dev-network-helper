@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全能开发环境网络助手 v3.0</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #22c55e;
+            --warning: #eab308;
+            --danger: #ef4444;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        h1 { margin: 0; font-size: 2.5rem; background: linear-gradient(to right, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        p.subtitle { color: var(--text-secondary); margin-top: 10px; }
+        
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        input[type="text"] {
+            background: #334155;
+            border: 1px solid #475569;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 1rem;
+            width: 120px;
+            text-align: center;
+        }
+        
+        button {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        button:hover { background-color: var(--accent-hover); transform: translateY(-1px); }
+        button.secondary { background-color: #475569; }
+        button.secondary:hover { background-color: #64748b; }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .module-card h3 { margin-top: 0; border-bottom: 1px solid #334155; padding-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .icon { font-size: 1.5rem; }
+        
+        .actions { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+        .action-btn {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #334155;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .action-btn:hover { border-color: var(--accent); background: #3b4d66; }
+        .action-btn span { font-size: 0.9rem; }
+        .tag { font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; background: #0f172a; color: var(--text-secondary); }
+        .tag.rec { color: var(--success); background: rgba(34, 197, 94, 0.1); }
+        
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--card-bg);
+            border-left: 4px solid var(--success);
+            padding: 15px 25px;
+            border-radius: 4px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            transform: translateY(100px);
+            transition: transform 0.3s;
+        }
+        #toast.show { transform: translateY(0); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>🇨🇳 全能开发环境助手</h1>
+        <p class="subtitle">v3.0 | Web 可视化版 | 无需依赖</p>
+    </header>
+
+    <div class="card">
+        <div class="control-group" style="justify-content: center;">
+            <label>当前代理端口:</label>
+            <input type="text" id="port-input" value="7897">
+            <button onclick="detectPort()">🔍 自动检测</button>
+        </div>
+        <p style="text-align: center; font-size: 0.9rem; color: var(--text-secondary);">
+            脚本会自动尝试扫描 7890, 7897, 1080 等常用端口
+        </p>
+    </div>
+
+    <div class="grid">
+        <!-- Python -->
+        <div class="card module-card">
+            <h3><span class="icon">🐍</span> Python (Pip/Conda)</h3>
+            <div class="actions">
+                <div class="action-btn" onclick="applyConfig('python', 'mirror')">
+                    <span>使用镜像模式 (清华源)</span>
+                    <span class="tag rec">推荐</span>
+                </div>
+                <div class="action-btn" onclick="applyConfig('python', 'proxy')">
+                    <span>使用代理模式 (VPN)</span>
+                    <span class="tag">解决缺包</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Node -->
+        <div class="card module-card">
+            <h3><span class="icon">📦</span> Node.js (Npm/Yarn)</h3>
+            <div class="actions">
+                <div class="action-btn" onclick="applyConfig('node', 'mirror')">
+                    <span>使用镜像模式 (淘宝源)</span>
+                    <span class="tag rec">推荐</span>
+                </div>
+                <div class="action-btn" onclick="applyConfig('node', 'proxy')">
+                    <span>使用代理模式 (VPN)</span>
+                    <span class="tag">解决超时</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Git -->
+        <div class="card module-card">
+            <h3><span class="icon">🐙</span> Git / GitHub</h3>
+            <div class="actions">
+                <div class="action-btn" onclick="applyConfig('git', 'proxy')">
+                    <span>开启 GitHub 智能分流</span>
+                    <span class="tag rec">强烈推荐</span>
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 5px 0;">仅 github.com 走代理，内网依然直连。</p>
+            </div>
+        </div>
+
+        <!-- Go / Docker -->
+        <div class="card module-card">
+            <h3><span class="icon">🐳</span> Go / Docker</h3>
+            <div class="actions">
+                <div class="action-btn" onclick="applyConfig('go', 'mirror')">
+                    <span>Go: 设置 GOPROXY</span>
+                    <span class="tag">七牛云</span>
+                </div>
+                <div class="action-btn" onclick="applyConfig('docker', 'mirror')">
+                    <span>Docker: 设置镜像加速</span>
+                    <span class="tag">配置JSON</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="toast">操作成功！</div>
+
+<script>
+    async function detectPort() {
+        const btn = document.querySelector('button[onclick="detectPort()"]');
+        const originalText = btn.innerText;
+        btn.innerText = "检测中...";
+        
+        try {
+            const res = await fetch('/api/detect_port', { method: 'POST', body: '{}' });
+            const data = await res.json();
+            if (data.status === 'success') {
+                document.getElementById('port-input').value = data.port;
+                showToast(`检测到端口: ${data.port}`);
+            }
+        } catch (e) {
+            showToast("检测失败", true);
+        }
+        btn.innerText = originalText;
+    }
+
+    async function applyConfig(module, mode) {
+        const port = document.getElementById('port-input').value;
+        const payload = { module, mode, port };
+        
+        try {
+            const res = await fetch('/api/apply_config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            showToast(data.message);
+        } catch (e) {
+            showToast("操作失败", true);
+        }
+    }
+
+    function showToast(msg, isError = false) {
+        const toast = document.getElementById('toast');
+        toast.innerText = msg;
+        toast.style.borderLeftColor = isError ? 'var(--danger)' : 'var(--success)';
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+    
+    // Auto detect on load
+    detectPort();
+</script>
+
+</body>
+</html>
