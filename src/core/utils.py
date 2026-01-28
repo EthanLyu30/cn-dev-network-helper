@@ -54,10 +54,28 @@ def run_command(command, capture_output=True):
         return None
 
 def detect_proxy_port():
-    """Detects the active proxy port on localhost by checking common ports or Windows registry."""
+    """Detects the active proxy port on localhost by checking common ports, Windows registry, or Env vars."""
     Colors.print_info("正在自动检测代理端口...")
     
-    # 1. Check Windows Registry (most accurate for system proxy)
+    # 1. Check Environment Variables (Universal for Linux/macOS/Windows)
+    env_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'http_proxy', 'https_proxy', 'all_proxy']
+    for var in env_vars:
+        value = os.environ.get(var)
+        if value:
+            # Parse port from "http://127.0.0.1:7890" or "127.0.0.1:7890"
+            try:
+                if '://' in value:
+                    port = value.split(':')[-1].strip('/')
+                else:
+                    port = value.split(':')[-1].strip('/')
+                
+                if port.isdigit():
+                    Colors.print_success(f"从环境变量 {var} 检测到端口: {port}")
+                    return port
+            except:
+                pass
+
+    # 2. Check Windows Registry (System Proxy)
     if platform.system() == "Windows":
         try:
             import winreg
@@ -78,8 +96,8 @@ def detect_proxy_port():
         except Exception:
             pass
 
-    # 2. Port Scan (Fallback)
-    common_ports = [7890, 7897, 1080, 10808, 10809, 8888]
+    # 3. Port Scan (Fallback)
+    common_ports = [7890, 7897, 1080, 10808, 10809, 8888, 8889, 9999]
     for port in common_ports:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(0.5)

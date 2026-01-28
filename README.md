@@ -8,7 +8,7 @@
 
 在国内进行软件开发，你是否经常遇到以下崩溃瞬间：
 
-*   🤬 **Git Clone/Push/Push** 速度只有几 KB/s，或者直接 `Connection time` / `443d 错误 out` / `443` 错误。
+*   🤬 **Git Clone/Push** 速度只有几 KB/s，或者直接 `Connection time`  / `443` 错误。
 *   🐢 **Pip Install** 下载到 99% 突然断开，且没有断点续传。
 *   🌀 **Conda** 解析依赖转圈圈半小时，最后报错。
 *   🤯 **手动配置繁琐**：既要记 VPN 端口，又要记各种镜像源地址，还得来回切换（内网/外网冲突）。
@@ -102,6 +102,7 @@ show_channel_urls: true
 ```text
 git_pip_conda_connectionfailure_research/
 ├── main.py                 # 🚀 程序入口 (启动 CLI 或 Web)
+├── setup_network.py        # 🕰️ 历史遗留版本 (Legacy 单文件版，不再维护)
 ├── README.md               # 📄 说明文档
 ├── src/
 │   ├── core/               # 🧠 核心逻辑
@@ -149,7 +150,12 @@ A: 这通常是代理软件拦截了 SSL 证书。
 
 ## 📜 更新日志 (Changelog)
 
-### v3.0 (Current) - 全能进化
+### v3.1 (Latest) - 跨平台与稳定性
+*   **兼容**: 增强 macOS/Linux 支持，新增环境变量端口检测。
+*   **Hosts**: 集成 GitHub Hosts 自动更新功能，作为 DNS 污染的终极解决方案。
+*   **诊断**: 增强 Git 连接诊断工具。
+
+### v3.0 - 全能进化
 *   **重构**: 采用模块化架构，代码更清晰，易于扩展。
 *   **新增**: Web 可视化界面 (无依赖)。
 *   **扩展**: 新增 Node.js (npm/yarn/pnpm), Go, Docker 支持。
@@ -168,9 +174,9 @@ A: 这通常是代理软件拦截了 SSL 证书。
 
 我们致力于解决开发环境的“最后一公里”问题：
 
-*   [ ] **macOS/Linux 深度适配**: 优化非 Windows 环境下的端口检测机制。
-*   **GitHub Hosts**: 集成 GitHub Hosts 自动更新功能，作为代理失效时的备选方案。
-*   **系统级代理**: 提供一键设置终端 (Terminal) 临时代理的功能 (`export http_proxy=...`)。
+*   ✅ **macOS/Linux 深度适配**: 优化非 Windows 环境下的端口检测机制 (Env Vars)。
+*   ✅ **GitHub Hosts**: 集成 GitHub Hosts 自动更新功能，作为代理失效时的备选方案。
+*   [ ] **系统级代理**: 提供一键设置终端 (Terminal) 临时代理的功能 (`export http_proxy=...`)。
 *   **局域网共享**: 允许局域网内其他机器通过本机代理上网。
 
 ---
