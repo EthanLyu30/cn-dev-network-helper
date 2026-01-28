@@ -114,6 +114,28 @@
             transition: transform 0.3s;
         }
         #toast.show { transform: translateY(0); }
+
+        .progress {
+            width: 100%;
+            height: 10px;
+            background: rgba(148, 163, 184, 0.25);
+            border-radius: 999px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(to right, #3b82f6, #8b5cf6);
+            transition: width 0.15s linear;
+        }
+        .loading-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
     </style>
 </head>
 <body>
@@ -121,8 +143,21 @@
 <div class="container">
     <header>
         <h1>🇨🇳 全能开发环境助手</h1>
-        <p class="subtitle">v3.0 | Web 可视化版 | 无需依赖</p>
+        <p class="subtitle">v3.3 | Web 可视化版 | 无需依赖</p>
     </header>
+
+    <div id="loading-box" class="card" style="display:none;">
+        <div>
+            <div style="font-weight: 700;">⏳ <span id="loading-title">正在处理中</span></div>
+            <div class="progress">
+                <div id="loading-bar" class="progress-bar"></div>
+            </div>
+            <div class="loading-meta">
+                <div id="loading-percent">0%</div>
+                <div id="loading-eta">预计剩余 0s</div>
+            </div>
+        </div>
+    </div>
 
     <div class="card">
         <div class="control-group" style="justify-content: center;">
@@ -198,25 +233,79 @@
 <div id="toast">操作成功！</div>
 
 <script>
+    let loadingTimer = null;
+    let loadingStartAt = 0;
+    let loadingEstimateMs = 0;
+
+    function stopLoadingProgress() {
+        if (loadingTimer) {
+            clearInterval(loadingTimer);
+            loadingTimer = null;
+        }
+    }
+
+    function renderLoadingProgress(elapsedMs) {
+        const percentEl = document.getElementById('loading-percent');
+        const etaEl = document.getElementById('loading-eta');
+        const barEl = document.getElementById('loading-bar');
+
+        const estimateMs = Math.max(loadingEstimateMs, 500);
+        const raw = elapsedMs / estimateMs;
+        const capped = Math.min(raw, 0.92);
+        const percent = Math.max(0, Math.floor(capped * 100));
+        const etaSeconds = Math.max(0, Math.ceil((estimateMs - elapsedMs) / 1000));
+
+        barEl.style.width = `${percent}%`;
+        percentEl.innerText = `${percent}%`;
+        etaEl.innerText = `预计剩余 ${etaSeconds}s`;
+    }
+
+    function startLoadingProgress(title, estimateSeconds) {
+        stopLoadingProgress();
+        loadingEstimateMs = Math.max(1, estimateSeconds) * 1000;
+        loadingStartAt = Date.now();
+
+        document.getElementById('loading-title').innerText = title;
+        document.getElementById('loading-box').style.display = 'block';
+        renderLoadingProgress(0);
+
+        loadingTimer = setInterval(() => {
+            const elapsed = Date.now() - loadingStartAt;
+            renderLoadingProgress(elapsed);
+        }, 150);
+    }
+
+    function finishLoadingProgress() {
+        stopLoadingProgress();
+        const barEl = document.getElementById('loading-bar');
+        const percentEl = document.getElementById('loading-percent');
+        const etaEl = document.getElementById('loading-eta');
+        barEl.style.width = '100%';
+        percentEl.innerText = '100%';
+        etaEl.innerText = '完成';
+        setTimeout(() => {
+            document.getElementById('loading-box').style.display = 'none';
+        }, 250);
+    }
+
     async function detectPort() {
-        const btn = document.querySelector('button[onclick="detectPort()"]');
-        const originalText = btn.innerText;
-        btn.innerText = "检测中...";
-        
+        startLoadingProgress('正在检测端口', 2);
         try {
             const res = await fetch('/api/detect_port', { method: 'POST', body: '{}' });
             const data = await res.json();
             if (data.status === 'success') {
                 document.getElementById('port-input').value = data.port;
                 showToast(`检测到端口: ${data.port}`);
+            } else {
+                finishLoadingProgress();
             }
         } catch (e) {
             showToast("检测失败", true);
         }
-        btn.innerText = originalText;
     }
 
     async function applyConfig(module, mode) {
+        startLoadingProgress('正在应用配置', 6);
         const port = document.getElementById('port-input').value;
         const payload = { module, mode, port };
         
@@ -234,6 +323,7 @@
     }
 
     function showToast(msg, isError = false) {
+        finishLoadingProgress();
         const toast = document.getElementById('toast');
         toast.innerText = msg;
         toast.style.borderLeftColor = isError ? 'var(--danger)' : 'var(--success)';

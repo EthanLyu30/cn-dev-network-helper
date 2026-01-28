@@ -37,6 +37,29 @@ class Colors:
     def print_error(msg):
         print(f"{Colors.FAIL}✘ {msg}{Colors.ENDC}")
 
+class ProgressBar:
+    def __init__(self, total, prefix='Progress', suffix='Complete', decimals=1, length=50, fill='█'):
+        self.total = total
+        self.prefix = prefix
+        self.suffix = suffix
+        self.decimals = decimals
+        self.length = length
+        self.fill = fill
+        self.iteration = 0
+
+    def update(self, iteration=None):
+        if iteration is not None:
+            self.iteration = iteration
+        else:
+            self.iteration += 1
+            
+        percent = ("{0:." + str(self.decimals) + "f}").format(100 * (self.iteration / float(self.total)))
+        filled_length = int(self.length * self.iteration // self.total)
+        bar = self.fill * filled_length + '-' * (self.length - filled_length)
+        print(f'\r{self.prefix} |{bar}| {percent}% {self.suffix}', end = '\r')
+        if self.iteration == self.total: 
+            print()
+
 def run_command(command, capture_output=True):
     try:
         result = subprocess.run(

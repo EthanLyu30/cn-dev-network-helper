@@ -1,6 +1,6 @@
 import sys
 import argparse
-from src.core.utils import Colors, detect_proxy_port, recommend_config
+from src.core.utils import Colors, detect_proxy_port, recommend_config, ProgressBar
 from src.core.backup import backup_all
 from src.modules.git import set_git_proxy, unset_git_proxy, diagnose_git_github
 from src.modules.python import (
@@ -11,6 +11,7 @@ from src.modules.node import set_node_mirror, set_node_proxy, unset_node_config
 from src.modules.go import set_go_proxy, unset_go_proxy
 from src.modules.docker import set_docker_mirror
 from src.modules.hosts import update_github_hosts
+from src.modules.proxy_tools import generate_terminal_proxy_commands, generate_lan_proxy_guide
 
 def main():
     parser = argparse.ArgumentParser(description="全能开发环境网络助手")
@@ -32,7 +33,7 @@ def main():
         print("2. [Python] 配置 Pip/Conda (镜像/代理)")
         print("3. [Node.js] 配置 Npm/Yarn (镜像/代理)")
         print("4. [其他] 配置 Git / Go / Docker")
-        print("5. [工具] 备份 / 依赖安装 / Git诊断 / Hosts更新")
+        print("5. [工具] 备份 / 诊断 / Hosts / 代理工具")
         print("6. [还原] 清除所有配置")
         print("0. 退出")
         
@@ -47,14 +48,18 @@ def main():
             rec = recommend_config(port)
             print(f"\n推荐方案: {Colors.BOLD}{'代理模式' if rec == 'proxy' else '镜像模式'}{Colors.ENDC}")
             if input("是否应用? (y/n): ").lower() == 'y':
+                pb = ProgressBar(total=100, prefix='正在配置', suffix='', length=30)
                 backup_all()
+                pb.update(30)
                 set_git_proxy(port)
+                pb.update(60)
                 if rec == 'proxy':
                     set_pip_proxy(port)
                     set_conda_proxy(port)
                 else:
                     set_pip_mirror()
                     set_conda_mirror()
+                pb.update(100)
                     
         elif choice == '2': # Python Menu
             print("\n--- Python 配置 ---")
@@ -93,11 +98,15 @@ def main():
             print("2. 智能安装 requirements.txt")
             print("3. Git 连接诊断")
             print("4. 更新 GitHub Hosts (解决 DNS 污染)")
+            print("5. 获取终端代理命令 (Terminal Proxy)")
+            print("6. 局域网代理共享指南 (LAN Sharing)")
             sub = input("请选择: ").strip()
             if sub == '1': backup_all()
             elif sub == '2': smart_install_requirements(detect_proxy_port())
             elif sub == '3': diagnose_git_github(detect_proxy_port())
             elif sub == '4': update_github_hosts()
+            elif sub == '5': generate_terminal_proxy_commands(detect_proxy_port())
+            elif sub == '6': generate_lan_proxy_guide(detect_proxy_port())
 
         elif choice == '6': # Reset
             backup_all()
