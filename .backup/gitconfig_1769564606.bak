@@ -1,0 +1,7 @@
+[user]
+	email = 2454472858@qq.com
+	name = EthanLyu30
+[http]
+	postBuffer = 524288000
+[http "https://github.com"]
+	proxy = http://127.0.0.1:7897
