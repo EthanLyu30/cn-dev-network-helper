@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全能开发环境助手 v4.0</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-sub: #64748b;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        @keyframes slideDownFade {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .banner-animate {
+            animation: slideDownFade 0.5s ease-out forwards;
+        }
+
+        /* Suite Cards Enhanced */
+        
+        /* Suite Cards Enhanced */
+        .suite-card {
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fff;
+        }
+        .suite-card:hover {
+            border-color: #93c5fd;
+            transform: translateY(-2px);
+        }
+        .suite-card.active {
+            border-color: var(--primary);
+            background: #eff6ff;
+            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);
+            position: relative;
+        }
+        .suite-card.active::after {
+            content: "✓";
+            position: absolute;
+            top: 10px; right: 10px;
+            color: var(--primary);
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        .s-title { font-weight: 700; margin-bottom: 5px; color: var(--text-main); }
+        .s-desc { font-size: 0.85rem; color: var(--text-sub); line-height: 1.4; }
+
+        /* Radio Cards */
+        .radio-card {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 15px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fff;
+            flex: 1;
+        }
+        .radio-card:hover { border-color: #93c5fd; }
+        .radio-card input:checked + span { color: var(--primary); font-weight: 600; }
+        /* Highlight parent label when checked - requires :has or JS, using simple check for now */
+        .radio-card:has(input:checked) {
+            border-color: var(--primary);
+            background: #eff6ff;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            background: var(--card-bg);
+            padding: 20px 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+        }
+
+        .brand h1 { margin: 0; font-size: 1.5rem; color: var(--text-main); }
+        .brand p { margin: 5px 0 0; color: var(--text-sub); font-size: 0.9rem; }
+        
+        .status-bar {
+            display: flex;
+            gap: 15px;
+            font-size: 0.85rem;
+        }
+        
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: #f1f5f9;
+            color: var(--text-sub);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status-badge.active { background: #dcfce7; color: #166534; }
+        .status-badge.warning { background: #fef9c3; color: #854d0e; cursor: pointer; }
+
+        /* Grid Layout */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .main-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+            border: 1px solid var(--border);
+        }
+
+        .card h2 {
+            margin: 0 0 15px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-main);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+        }
+
+        /* Template Cards */
+        .template-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .template-item {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .template-item:hover {
+            border-color: var(--primary);
+            background: #eff6ff;
+            transform: translateY(-2px);
+        }
+        .template-item.active {
+            border-color: var(--primary);
+            background: #eff6ff;
+            box-shadow: 0 0 0 2px var(--primary);
+        }
+        .t-title { font-weight: 700; margin-bottom: 5px; }
+        .t-desc { font-size: 0.85rem; color: var(--text-sub); margin-bottom: 10px; height: 40px; overflow: hidden; }
+        .t-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+        .t-tag { 
+            font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; 
+            background: #e2e8f0; color: #475569;
+        }
+        
+        /* Module Toggles (Manual Mode) */
+        .module-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px dashed var(--border);
+        }
+        .module-row:last-child { border-bottom: none; }
+        .module-info { display: flex; flex-direction: column; }
+        .module-name { font-weight: 600; font-size: 0.95rem; }
+        .module-status { font-size: 0.8rem; color: var(--text-sub); }
+        
+        .btn-group { display: flex; gap: 5px; }
+        .btn-mini {
+            padding: 4px 10px;
+            border: 1px solid var(--border);
+            background: white;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        .btn-mini.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Plugins List */
+        .plugin-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .plugin-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+        .plugin-name { font-weight: 600; }
+
+        /* Logs */
+        .log-container {
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 12px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Consolas', monospace;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+        }
+        .log-entry { margin-bottom: 4px; border-bottom: 1px solid #1e293b; padding-bottom: 2px; }
+        .log-info { color: #60a5fa; }
+        .log-error { color: #f87171; }
+        .log-success { color: #4ade80; }
+
+        /* Actions */
+        .primary-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.2s;
+        }
+        .primary-btn:hover { background: var(--primary-hover); }
+        .secondary-btn {
+            padding: 8px 16px;
+            background: white;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        /* Overlay */
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            /* backdrop-filter: blur(2px); User requested to see background clearly or have logs in modal */
+        }
+        .loading-card {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            text-align: center;
+            width: 300px;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+        }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="brand">
+            <h1>🛠️ 全能开发环境助手 <span style="font-size:0.8em; opacity:0.6;">v4.0</span></h1>
+            <p>一键配置 Python/Node/Git/Docker 国内加速与代理环境</p>
+        </div>
+        <div class="status-bar">
+            <div class="status-badge" id="admin-status">
+                <span>🛡️ 权限检查中...</span>
+            </div>
+            <div class="status-badge warning" id="update-status" style="display:none;" onclick="checkUpdates()">
+                <span>🚀 发现新版本</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-grid">
+        <!-- Left Column: Controls -->
+        <div class="left-col">
+            
+            <!-- Quick Templates (Renamed) -->
+            <div class="card">
+                <h2>⚡ 网络加速预设 <span style="font-size:0.8rem; font-weight:normal; margin-left:auto; color:var(--text-sub);">镜像/代理一键切换</span></h2>
+                <div id="template-container" class="template-list">
+                    <div style="text-align:center; width:100%; padding:20px; color:var(--text-sub);">正在加载配置...</div>
+                </div>
+            </div>
+
+            <!-- Environment Builder (New Feature) -->
+            <div class="card" style="border-color: var(--primary);">
+                <h2>🚀 环境构建与安装 <span style="font-size:0.8rem; font-weight:normal; margin-left:auto; color:var(--primary); background: #eff6ff; padding: 2px 8px; border-radius: 10px;">New</span></h2>
+                
+                <!-- Tabs -->
+                <div style="display:flex; border-bottom:1px solid var(--border); margin-bottom:15px;">
+                    <div class="tab-item active" onclick="switchTab('tab-project')" style="padding:10px 15px; cursor:pointer; font-weight:600; border-bottom:2px solid var(--primary); color:var(--primary);">项目分析</div>
+                    <div class="tab-item" onclick="switchTab('tab-quick')" style="padding:10px 15px; cursor:pointer; color:var(--text-sub);">一键装机</div>
+                </div>
+
+                <!-- Tab 1: Project Analysis -->
+                <div id="tab-project">
+                    <p style="font-size:0.9rem; color:var(--text-sub); margin-top:0;">
+                        输入项目路径，自动分析 requirements.txt / package.json 并构建环境。
+                    </p>
+                    <div style="display:flex; gap:10px; margin-bottom:10px;">
+                        <input type="text" id="project-path" placeholder="例如: D:\MyProject" style="flex:1; padding:8px; border:1px solid var(--border); border-radius:6px;">
+                        <button class="primary-btn" style="width:auto; margin-top:0;" onclick="analyzeProject()">🔍 分析</button>
+                    </div>
+                    <div id="analysis-result" style="display:none; background:#f8fafc; padding:10px; border-radius:8px; border:1px solid var(--border);">
+                        <!-- Dynamic Content -->
+                    </div>
+                </div>
+
+                <!-- Tab 2: Quick Install -->
+                <div id="tab-quick" style="display:none;">
+                    
+                    <!-- Hardware Info Banner -->
+                    <div id="hw-info-banner" style="margin-bottom:20px; display:none;"></div>
+
+                    <p style="font-size:0.9rem; color:var(--text-sub); margin-top:0;">
+                        选择开发方向，一键安装所需的全部依赖包 (自动使用国内源)。
+                    </p>
+                    
+                    <!-- Suite Selection -->
+                    <div style="margin-bottom:15px;">
+                        <label style="font-weight:600; font-size:0.9rem; display:block; margin-bottom:8px;">1. 选择应用套件</label>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                            <div class="suite-card active" onclick="selectSuite(this, 'dl_torch')">
+                                <div class="s-title">🔥 PyTorch 深度学习</div>
+                                <div class="s-desc">Torch (智能匹配 CUDA/CPU), Vision, Audio, Pandas, Sklearn, HuggingFace Transformers</div>
+                            </div>
+                            <div class="suite-card" onclick="selectSuite(this, 'dl_tf')">
+                                <div class="s-title">📦 TensorFlow 深度学习</div>
+                                <div class="s-desc">TensorFlow, Keras, Numpy, Pandas, Matplotlib, TensorBoard</div>
+                            </div>
+                            <div class="suite-card" onclick="selectSuite(this, 'web_dev')">
+                                <div class="s-title">🌐 Python Web 开发</div>
+                                <div class="s-desc">FastAPI, Django, Flask, SQLAlchemy, Requests, Redis, Celery</div>
+                            </div>
+                            <div class="suite-card" onclick="selectSuite(this, 'data_science')">
+                                <div class="s-title">📊 数据科学与分析</div>
+                                <div class="s-desc">Pandas, Scipy, Seaborn, JupyterLab, OpenPyXL, Plotly, SymPy</div>
+                            </div>
+                            <div class="suite-card" onclick="selectSuite(this, 'app_dev')">
+                                <div class="s-title">📱 桌面/App 开发</div>
+                                <div class="s-desc">PyQt6, Kivy, PyInstaller, Buildozer, cx_Freeze</div>
+                            </div>
+                            <div class="suite-card" onclick="selectSuite(this, 'spider')">
+                                <div class="s-title">🕷️ 爬虫与采集</div>
+                                <div class="s-desc">Scrapy, Selenium, BS4, Playwright, PyQuery</div>
+                            </div>
+                        </div>
+
+                        <!-- Package Selection Area -->
+                        <div id="pkg-selection-area" style="display:none; margin-top:15px; background:#f8fafc; padding:15px; border-radius:8px; border:1px solid var(--border);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <label style="font-weight:600; font-size:0.9rem;">📦 包含的依赖包 (可自定义)</label>
+                                <div style="font-size:0.8rem;">
+                                    <a href="javascript:void(0)" onclick="toggleAllPkgs(true)">全选</a> / 
+                                    <a href="javascript:void(0)" onclick="toggleAllPkgs(false)">全不选</a>
+                                </div>
+                            </div>
+                            <div id="pkg-list" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:8px;">
+                                <!-- Checkboxes go here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Target Selection -->
+                    <div style="margin-bottom:15px;">
+                        <label style="font-weight:600; font-size:0.9rem; display:block; margin-bottom:8px;">2. 安装位置 (目标环境)</label>
+                        <div style="display:flex; flex-direction: column; gap: 10px;">
+                            <div style="display:flex; gap:15px;">
+                                <label class="radio-card">
+                                    <input type="radio" name="install_target" value="pip_current" checked onchange="toggleEnvInput()">
+                                    <span>当前 Pip 环境 (Global)</span>
+                                </label>
+                                <label class="radio-card">
+                                    <input type="radio" name="install_target" value="conda_current" onchange="toggleEnvInput()">
+                                    <span>当前 Conda 环境</span>
+                                </label>
+                                <label class="radio-card">
+                                    <input type="radio" name="install_target" value="conda_new" onchange="toggleEnvInput()">
+                                    <span>新建 Conda 环境</span>
+                                </label>
+                            </div>
+                            
+                            <!-- Custom Env Name Input -->
+                            <div id="new-env-input-container" style="display:none; background:#f1f5f9; padding:10px; border-radius:8px; border:1px solid var(--border);">
+                                <label style="font-size:0.85rem; color:var(--text-sub);">新环境名称 (英文):</label>
+                                <div style="display:flex; gap:10px; margin-top:5px;">
+                                    <input type="text" id="custom-env-name" placeholder="例如: my_torch_env" style="flex:1; padding:6px; border:1px solid var(--border); border-radius:4px;">
+                                    <span style="font-size:0.8rem; color:var(--text-sub); align-self:center;">(默认: env_suite_时间戳)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="primary-btn" onclick="startSuiteInstall()">⬇️ 开始一键安装</button>
+                </div>
+            </div>
+
+            <!-- Recent Environments (New Feature) -->
+            <div class="card" id="recent-envs-card" style="display:none;">
+                <h2>🕒 最近创建的环境 <span style="font-size:0.8rem; font-weight:normal; margin-left:auto; color:var(--text-sub);">保留最近20条记录</span></h2>
+                <div id="recent-envs-list" class="plugin-list">
+                    <!-- Items injected via JS -->
+                </div>
+            </div>
+
+            <!-- Manual Config -->
+            <div class="card">
+                <h2>⚙️ 手动单独配置</h2>
+                
+                <div class="module-row" style="background: #f8fafc; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--border);">
+                    <div class="module-info">
+                        <span class="module-name">🔌 代理端口设置</span>
+                        <span class="module-status">默认为 7897 (Clash)</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:5px;">
+                        <input type="text" id="port-input" value="7897" style="width:60px; padding:4px; border:1px solid var(--border); border-radius:4px; text-align:center;">
+                        <button class="btn-mini" onclick="detectPort()">自动检测</button>
+                    </div>
+                </div>
+
+                <div class="module-row">
+                    <div class="module-info">
+                        <span class="module-name">Python (Pip/Conda)</span>
+                        <span class="module-status">包管理下载加速</span>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn-mini" onclick="runManual('python', 'mirror')">国内镜像</button>
+                        <button class="btn-mini" onclick="runManual('python', 'proxy')">全球代理</button>
+                    </div>
+                </div>
+
+                <div class="module-row">
+                    <div class="module-info">
+                        <span class="module-name">Node.js (Npm/Yarn)</span>
+                        <span class="module-status">前端依赖加速</span>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn-mini" onclick="runManual('node', 'mirror')">国内镜像</button>
+                        <button class="btn-mini" onclick="runManual('node', 'proxy')">全球代理</button>
+                    </div>
+                </div>
+
+                <div class="module-row">
+                    <div class="module-info">
+                        <span class="module-name">Git / GitHub</span>
+                        <span class="module-status">代码拉取/推送加速</span>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn-mini" onclick="runManual('git', 'proxy')">智能分流</button>
+                    </div>
+                </div>
+
+                <div class="module-row">
+                    <div class="module-info">
+                        <span class="module-name">Go / Docker</span>
+                        <span class="module-status">容器与后端加速</span>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn-mini" onclick="runManual('go', 'mirror')">Go 代理</button>
+                        <button class="btn-mini" onclick="runManual('docker', 'mirror')">Docker 镜像</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tools -->
+            <div class="card">
+                <h2>🧰 实用工具箱</h2>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button class="secondary-btn" onclick="runTool('update_hosts')">📝 更新 GitHub Hosts</button>
+                    <button class="secondary-btn" onclick="runTool('terminal_proxy')">💻 终端代理命令</button>
+                    <button class="secondary-btn" onclick="runTool('lan_guide')">📱 局域网共享向导</button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Plugins & Logs -->
+        <div class="right-col">
+            
+            <!-- Plugins -->
+            <div class="card">
+                <h2>🧩 扩展脚本 (Plugins)
+                    <button class="btn-mini" style="margin-left:auto;" onclick="refreshPlugins()">🔄 刷新</button>
+                </h2>
+                <div style="font-size:0.8rem; color:var(--text-sub); margin-bottom:10px; background:#fff7ed; padding:8px; border-radius:6px; border:1px solid #fed7aa;">
+                    ℹ️ 这是一个高级功能区。你可以编写 Python 脚本放入 <code>plugins/</code> 目录，在此处一键运行（例如：自定义的数据备份脚本、特殊的网络诊断脚本等）。
+                </div>
+                <div id="plugin-container" class="plugin-list">
+                    <div style="padding:10px; color:var(--text-sub); font-size:0.9rem;">
+                        暂无脚本。<br>
+                        <a href="#" onclick="createDemoPlugin()" style="color:var(--primary);">👉 生成示例脚本</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logs -->
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h2 style="margin:0; border:none;">🧾 运行日志</h2>
+                    <div class="btn-group">
+                        <button class="btn-mini" onclick="toggleLogModal(true)">🔍 展开</button>
+                        <button class="btn-mini" onclick="downloadReport()">导出报告</button>
+                    </div>
+                </div>
+                <div id="log-output" class="log-container">
+                    <div class="log-entry">[System] 准备就绪，等待指令...</div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+<!-- Log Modal -->
+<div id="log-modal" class="overlay" style="display:none; align-items:flex-start; padding-top:50px;">
+    <div class="card" style="width:90%; max-width:1200px; height:85vh; display:flex; flex-direction:column; padding:0;">
+        <div style="padding:15px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+            <h2 style="margin:0; border:none; font-size:1.2rem;">完整运行日志</h2>
+            <button class="btn-mini" style="font-size:1.2rem; padding:5px 15px;" onclick="toggleLogModal(false)">×</button>
+        </div>
+        <div id="log-modal-content" class="log-container" style="flex:1; height:auto; border-radius:0 0 16px 16px; font-size:0.95rem;">
+            <!-- Content synced via JS -->
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="overlay" style="display:none;">
+    <div class="loading-card">
+        <div style="text-align:right;">
+            <span style="cursor:pointer; font-size:1.2rem; color:#94a3b8;" onclick="showLoading(false)">×</span>
+        </div>
+        <div id="loading-spinner" class="spinner"></div>
+        <div id="loading-success-icon" style="font-size: 3rem; margin-bottom: 20px; display: none;">✅</div>
+        <h3 id="loading-text">正在处理...</h3>
+        
+        <!-- Progress Bar -->
+        <div style="width: 100%; background: #e2e8f0; height: 8px; border-radius: 4px; margin: 15px 0 10px; overflow: hidden;">
+            <div id="progress-bar-fill" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.3s ease;"></div>
+        </div>
+        <div id="progress-text" style="font-size: 0.85rem; color: var(--primary); font-weight: 600; min-height: 20px;"></div>
+        
+        <!-- Mini Log View inside Overlay -->
+        <div id="mini-log-container" style="
+            margin-top: 15px; 
+            background: #f8fafc; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 6px; 
+            padding: 8px; 
+            height: 120px; 
+            overflow-y: auto; 
+            font-family: 'Fira Code', monospace; 
+            font-size: 0.75rem; 
+            color: #64748b; 
+            text-align: left;
+            display: none;
+        ">
+            <!-- Logs will appear here -->
+        </div>
+
+        <p id="loading-sub" style="color:var(--text-sub); font-size:0.9rem; margin-top: 10px;">请勿关闭窗口</p>
+        
+        <button id="loading-stop-btn" class="secondary-btn" style="width:100%; margin-top:10px; border-color:var(--danger); color:var(--danger);" onclick="stopCurrentJob()">⏹ 停止任务</button>
+        
+        <button id="loading-close-btn" class="primary-btn" style="display:none; margin-top:15px;" onclick="showLoading(false)">关闭</button>
+    </div>
+</div>
+
+<script>
+    // State
+    let currentJobId = null;
+    let sse = null;
+
+    // Initialization
+    window.onload = function() {
+        checkStatus();
+        loadTemplates();
+        refreshPlugins();
+        detectPort();
+        loadRecentEnvs();
+    };
+
+    // --- API Interactions ---
+
+    async function checkStatus() {
+        try {
+            const res = await fetch('/api/status');
+            const data = await res.json();
+            
+            const adminEl = document.getElementById('admin-status');
+            if (data.is_admin) {
+                adminEl.innerHTML = '<span>🛡️ 管理员模式</span>';
+                adminEl.classList.add('active');
+            } else {
+                adminEl.innerHTML = '<span>⚠️ 普通用户模式 (点击重启)</span>';
+                adminEl.classList.add('warning');
+                adminEl.onclick = relaunchAsAdmin;
+            }
+
+            if (data.update) {
+                document.getElementById('update-status').style.display = 'flex';
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function loadTemplates() {
+        const container = document.getElementById('template-container');
+        try {
+            const res = await fetch('/api/templates');
+            const data = await res.json();
+            
+            container.innerHTML = data.templates.map(t => `
+                <div class="template-item" onclick="applyTemplate('${t.key}')">
+                    <div class="t-title">${t.label}</div>
+                    <div class="t-desc">${t.description}</div>
+                    <div class="t-tags">
+                        ${(t.steps || []).map(s => `<span class="t-tag">${s.module}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) {
+            container.innerHTML = '<div style="color:red">加载模板失败</div>';
+        }
+    }
+
+    async function refreshPlugins() {
+        const container = document.getElementById('plugin-container');
+        try {
+            const res = await fetch('/api/plugins');
+            const data = await res.json();
+            
+            if (data.plugins.length === 0) {
+                container.innerHTML = `
+                    <div style="padding:15px; text-align:center; background:#f1f5f9; border-radius:8px;">
+                        <div style="margin-bottom:5px;">📂 暂无插件</div>
+                        <button class="btn-mini" onclick="createDemoPlugin()">生成示例插件 (demo_plugin.py)</button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = data.plugins.map(p => `
+                <div class="plugin-item">
+                    <span class="plugin-name">🔌 ${p.name}</span>
+                    <button class="btn-mini" onclick="runPlugin('${p.name}')">运行</button>
+                </div>
+            `).join('');
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function createDemoPlugin() {
+        // This is a bit of a hack since we don't have a dedicated "create file" API exposed to web
+        // But we can use the backend to run a command or we can just guide the user.
+        // Actually, since I (the agent) already created the file, this button is just to refresh the list if it wasn't there.
+        // Or if the user deleted it.
+        // Let's just refresh for now, assuming the agent put it there. 
+        // If we really need to create it dynamically via web, we'd need a new endpoint.
+        // For now, I'll trigger a refresh and log a message.
+        log('info', '正在刷新插件列表...');
+        await refreshPlugins();
+        log('info', '如果未看到插件，请确保 plugins/ 目录下有 .py 文件');
+    }
+
+    // --- UI Logic ---
+    
+    function switchTab(tabId) {
+        // Hide all
+        document.getElementById('tab-project').style.display = 'none';
+        document.getElementById('tab-quick').style.display = 'none';
+        
+        // Deactivate headers
+        document.querySelectorAll('.tab-item').forEach(el => {
+            el.classList.remove('active');
+            el.style.fontWeight = 'normal';
+            el.style.borderBottom = 'none';
+            el.style.color = 'var(--text-sub)';
+        });
+        
+        // Show target
+        document.getElementById(tabId).style.display = 'block';
+        
+        // Activate header
+        const activeHeader = document.querySelector(`.tab-item[onclick="switchTab('${tabId}')"]`);
+        if (activeHeader) {
+            activeHeader.classList.add('active');
+            activeHeader.style.fontWeight = '600';
+            activeHeader.style.borderBottom = '2px solid var(--primary)';
+            activeHeader.style.color = 'var(--primary)';
+        }
+
+        if (tabId === 'tab-quick') {
+            fetchSysInfo();
+        }
+    }
+
+    let currentSuite = 'dl_torch';
+
+    function fetchSysInfo() {
+        fetch('/api/sys_info')
+            .then(r => r.json())
+            .then(data => {
+                const info = data.info;
+                const banner = document.getElementById('hw-info-banner');
+                if (info && banner) {
+                    banner.innerHTML = `
+                        <div class="banner-animate" style="background:#f0f9ff; border:1px solid #bae6fd; padding:15px; border-radius:8px; font-size:0.9rem; color:#0369a1; display:flex; gap:15px; align-items:start;">
+                            <span style="font-size:1.4rem; padding-top:2px;">🖥️</span>
+                            <div style="flex:1;">
+                                <div style="margin-bottom:4px;">
+                                    <strong>系统检测:</strong> ${info.os} (${info.arch}) | 
+                                    <strong>硬件加速:</strong> ${info.gpu} ${info.cuda ? `(CUDA ${info.cuda})` : ''}
+                                </div>
+                                <div style="font-size:0.85rem; color:#0c4a6e; background:#e0f2fe; padding:6px 10px; border-radius:6px; margin-top:6px; border-left: 3px solid #0284c7;">
+                                    ${info.recommendation || '我们将根据硬件自动为您选择最佳版本的依赖包'}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    banner.style.display = 'block';
+                }
+            })
+            .catch(e => console.warn('Failed to fetch sys info', e));
+    }
+
+    function selectSuite(el, suite) {
+        document.querySelectorAll('.suite-card').forEach(c => c.classList.remove('active'));
+        el.classList.add('active');
+        currentSuite = suite;
+        loadSuitePackages(suite);
+    }
+
+    function loadSuitePackages(suite) {
+        const container = document.getElementById('pkg-selection-area');
+        const list = document.getElementById('pkg-list');
+        
+        container.style.display = 'block';
+        list.innerHTML = '<div style="color:var(--text-sub);">正在加载包列表...</div>';
+        
+        fetch(`/api/suite_details?suite=${suite}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    list.innerHTML = `<div style="color:red;">加载失败: ${data.error}</div>`;
+                    return;
+                }
+                
+                const pkgs = data.pip_base || [];
+                
+                list.innerHTML = pkgs.map(pkg => `
+                    <label style="display:flex; align-items:center; gap:5px; font-size:0.85rem; cursor:pointer; background:white; padding:4px 8px; border-radius:4px; border:1px solid #e2e8f0;">
+                        <input type="checkbox" name="pkg_select" value="${pkg}" checked>
+                        <span>${pkg}</span>
+                    </label>
+                `).join('');
+            })
+            .catch(e => {
+                list.innerHTML = `<div style="color:red;">加载异常</div>`;
+                console.error(e);
+            });
+    }
+
+    function toggleAllPkgs(checked) {
+        document.querySelectorAll('input[name="pkg_select"]').forEach(cb => cb.checked = checked);
+    }
+
+    function toggleEnvInput() {
+        const target = document.querySelector('input[name="install_target"]:checked').value;
+        const div = document.getElementById('new-env-input-container');
+        if (div) {
+            div.style.display = (target === 'conda_new') ? 'block' : 'none';
+        }
+    }
+
+    function startSuiteInstall() {
+        const target = document.querySelector('input[name="install_target"]:checked').value;
+        const envNameInput = document.getElementById('custom-env-name');
+        const envName = envNameInput ? envNameInput.value.trim() : null;
+        
+        // Validation
+        if (target === 'conda_new' && envName && !/^[a-zA-Z0-9_-]+$/.test(envName)) {
+            alert('环境名称只能包含字母、数字、下划线和连字符');
+            return;
+        }
+
+        // Collect packages
+        const checkboxes = document.querySelectorAll('input[name="pkg_select"]:checked');
+        let customPackages = null;
+        if (checkboxes.length > 0 || document.getElementById('pkg-selection-area').style.display !== 'none') {
+             customPackages = Array.from(checkboxes).map(cb => cb.value);
+             if (customPackages.length === 0) {
+                 alert('请至少选择一个依赖包');
+                 return;
+             }
+        }
+
+        startJob('install_suite', { suite: currentSuite, target: target, env_name: envName, custom_packages: customPackages });
+    }
+
+    async function analyzeProject() {
+        const path = document.getElementById('project-path').value.trim();
+        if (!path) {
+            alert('请输入项目路径');
+            return;
+        }
+        
+        startJob('analyze_project', { path });
+    }
+
+    async function installProject(path, envType) {
+        if (!confirm(`确定要使用 ${envType} 构建环境吗？\n将自动下载依赖。`)) return;
+        startJob('install_project', { path, envType });
+    }
+
+    async function installPkg(pkg) {
+        if (!confirm(`确定要安装/创建 ${pkg} 环境吗？`)) return;
+        startJob('quick_install', { pkg });
+    }
+
+    // --- Action Runners ---
+
+    async function applyTemplate(key) {
+        if (!confirm(`确定要应用 "${key}" 模板吗？\n这将覆盖当前的 Pip/Npm/Git 配置。`)) return;
+        startJob('apply_template', { template: key });
+    }
+
+    async function runManual(module, mode) {
+        startJob('apply_config', { module, mode });
+    }
+
+    async function runTool(tool) {
+        startJob(tool, {});
+    }
+
+    async function runPlugin(name) {
+        startJob('plugin_run', { name });
+    }
+
+    async function relaunchAsAdmin() {
+        if (confirm('需要重启 Web 服务以获取管理员权限。继续？')) {
+            await fetch('/api/relaunch_admin', { method: 'POST' });
+            alert('正在重启... 请稍后刷新页面');
+        }
+    }
+
+    async function detectPort() {
+        startJob('detect_port', {}, { silent: true });
+    }
+
+    // --- Job & SSE System ---
+
+    async function startJob(action, params, options = {}) {
+        if (!options.silent) {
+            showLoading(true, '正在初始化任务...');
+            // Immediately set visual progress to show something is happening
+            updateProgress(5, '准备中...');
+        }
+        
+        try {
+            // Get port if needed (simplified)
+            params.port = document.getElementById('port-input')?.value || '7897';
+
+            const res = await fetch('/api/start_job', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action, params })
+            });
+            const data = await res.json();
+            
+            if (data.status === 'started') {
+                currentJobId = data.job_id;
+                connectSSE(data.job_id, options);
+            } else {
+                throw new Error(data.error || '无法启动任务');
+            }
+        } catch (e) {
+            if (!options.silent) showLoading(false);
+            log('error', e.message);
+            if (!options.silent) alert('任务启动失败: ' + e.message);
+        }
+    }
+
+    function connectSSE(jobId, options = {}) {
+        if (sse) sse.close();
+        
+        // Reset progress UI
+        updateProgress(0, '初始化...');
+
+        sse = new EventSource(`/api/stream_progress?job_id=${jobId}`);
+        
+        sse.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+            
+            // Progress handling
+            if (data.type === 'progress') {
+                updateProgress(data.value, data.title);
+            }
+
+            // Log handling
+            if (data.type === 'log') {
+                log(data.level, data.message);
+                
+                // Also update mini log in loading overlay
+                const miniLog = document.getElementById('mini-log-container');
+                if (miniLog && miniLog.style.display !== 'none') {
+                    const div = document.createElement('div');
+                    // Simple formatting
+                    div.innerText = data.message; 
+                    div.style.whiteSpace = 'nowrap';
+                    miniLog.appendChild(div);
+                    miniLog.scrollTop = miniLog.scrollHeight;
+                }
+
+                // Try to extract ETA or Speed from common package managers
+                // Pip: "10.5 MB 2.3 MB/s eta 0:00:05"
+                const etaMatch = data.message.match(/eta\s+(\d+:\d+:\d+|\d+:\d+)/i);
+                if (etaMatch) {
+                    const progressText = document.getElementById('progress-text');
+                    if (progressText) {
+                        // Append ETA to existing text if not already there
+                        const current = progressText.innerText.split(' - ETA:')[0]; 
+                        progressText.innerText = `${current} - 预计剩余: ${etaMatch[1]}`;
+                    }
+                }
+            }
+
+            // Status handling
+            if (data.type === 'done') {
+                // 1. Force progress to 100%
+                updateProgress(100, '完成');
+                
+                if (!options.silent) {
+                    // 2. Show success state in modal instead of alert
+                    const spinner = document.getElementById('loading-spinner');
+                    const successIcon = document.getElementById('loading-success-icon');
+                    const closeBtn = document.getElementById('loading-close-btn');
+                    const stopBtn = document.getElementById('loading-stop-btn');
+                    const subText = document.getElementById('loading-sub');
+                    const titleText = document.getElementById('loading-text');
+                    const miniLog = document.getElementById('mini-log-container');
+
+                    if (spinner) spinner.style.display = 'none';
+                    if (successIcon) successIcon.style.display = 'block';
+                    if (closeBtn) closeBtn.style.display = 'block';
+                    if (stopBtn) stopBtn.style.display = 'none';
+                    if (subText) subText.style.display = 'none';
+                    if (titleText) titleText.innerText = '任务执行成功';
+                    // Hide logs on success to clean up UI? Or keep them? 
+                    // Keeping them is better for verification.
+                    if (miniLog) miniLog.style.display = 'block'; // Keep showing logs on success for review, but maybe smaller?
+                    // Actually, user wants to see logs. Let's keep it.
+                    // But the success icon is huge. Let's just keep the log container there.
+
+
+                    // Optional: Auto-close after delay? Or let user close.
+                    // User complained about "too fast", so let's let them close it manually or wait a bit longer.
+                    // But "manual close" is safer for them to see the 100%.
+                }
+                
+                log('success', '✅ 任务执行成功');
+                sse.close();
+                loadRecentEnvs();
+                
+                // Handle specific results
+                if (data.result && data.result.analysis) {
+                    const res = data.result.analysis;
+                    const container = document.getElementById('analysis-result');
+                    container.style.display = 'block';
+                    
+                    let html = `
+                        <div style="margin-bottom:10px; font-weight:600;">📁 分析结果:</div>
+                        <ul style="margin:0; padding-left:20px; color:var(--text-sub); font-size:0.9rem;">
+                            <li>项目名称: ${res.name}</li>
+                            <li>检测到依赖: ${res.deps.join(', ') || '无'}</li>
+                            <li>推荐环境: <span style="color:var(--success); font-weight:bold;">${res.recommendation}</span></li>
+                        </ul>
+                        <div style="margin-top:15px; display:flex; gap:10px;">
+                    `;
+                    
+                    if (res.has_conda) {
+                        html += `<button class="primary-btn" style="flex:1; margin:0;" onclick="installProject('${res.path.replace(/\\/g, '\\\\')}', 'conda')">构建 Conda 环境</button>`;
+                    }
+                    html += `<button class="primary-btn" style="flex:1; margin:0; background:var(--text-main);" onclick="installProject('${res.path.replace(/\\/g, '\\\\')}', 'venv')">构建 Venv 环境</button>`;
+                    
+                    html += `</div>`;
+                    container.innerHTML = html;
+                }
+
+                if (data.result && data.result.port) {
+                    const input = document.getElementById('port-input');
+                    if (input) {
+                        input.value = data.result.port;
+                        log('info', `端口已更新为: ${data.result.port}`);
+                    }
+                }
+                
+                // If there's a specific message, we can show it in log or modal title, but avoid alert
+                if (data.result && data.result.message) {
+                   log('success', data.result.message);
+                }
+            } else if (data.type === 'error') {
+                if (!options.silent) {
+                    // Show error state in modal
+                    const spinner = document.getElementById('loading-spinner');
+                    const titleText = document.getElementById('loading-text');
+                    const subText = document.getElementById('loading-sub');
+                    const closeBtn = document.getElementById('loading-close-btn');
+                    const stopBtn = document.getElementById('loading-stop-btn');
+                    const bar = document.getElementById('progress-bar-fill');
+                    
+                    if (spinner) spinner.style.display = 'none';
+                    if (titleText) {
+                        titleText.innerText = '任务失败';
+                        titleText.style.color = 'var(--danger)';
+                    }
+                    if (subText) subText.innerText = data.error;
+                    if (subText) subText.style.color = 'var(--danger)';
+                    if (closeBtn) closeBtn.style.display = 'block';
+                    if (stopBtn) stopBtn.style.display = 'none';
+                    if (bar) bar.style.backgroundColor = 'var(--danger)';
+                }
+                log('error', `❌ 任务失败: ${data.error}`);
+                sse.close();
+            }
+        };
+
+        sse.onerror = () => {
+            console.warn('SSE Connection lost');
+            sse.close();
+            // Don't hide loading immediately, maybe retry? 
+            // For now just hide to avoid stuck UI
+            if (!options.silent) showLoading(false);
+        };
+    }
+
+    // --- UI Utilities ---
+
+    function log(level, msg) {
+        const el = document.getElementById('log-output');
+        const div = document.createElement('div');
+        div.className = 'log-entry';
+        
+        const time = new Date().toLocaleTimeString();
+        let colorClass = '';
+        if (level === 'error') colorClass = 'log-error';
+        if (level === 'success') colorClass = 'log-success';
+        if (level === 'info') colorClass = 'log-info';
+
+        div.innerHTML = `<span style="color:#64748b">[${time}]</span> <span class="${colorClass}">${msg}</span>`;
+        el.appendChild(div);
+        el.scrollTop = el.scrollHeight;
+    }
+
+    function showLoading(show, text) {
+        const el = document.getElementById('loading-overlay');
+        const spinner = document.getElementById('loading-spinner');
+        const successIcon = document.getElementById('loading-success-icon');
+        const closeBtn = document.getElementById('loading-close-btn');
+        const stopBtn = document.getElementById('loading-stop-btn');
+        const subText = document.getElementById('loading-sub');
+        const titleText = document.getElementById('loading-text');
+        const bar = document.getElementById('progress-bar-fill');
+        const miniLog = document.getElementById('mini-log-container');
+
+        if (show) {
+            // Reset state
+            if (spinner) spinner.style.display = 'block';
+            if (successIcon) successIcon.style.display = 'none';
+            if (closeBtn) closeBtn.style.display = 'none';
+            if (stopBtn) {
+                stopBtn.style.display = 'block';
+                stopBtn.innerText = '⏹ 停止任务';
+            }
+            if (subText) {
+                subText.style.display = 'block';
+                subText.innerText = '请勿关闭窗口';
+                subText.style.color = 'var(--text-sub)';
+            }
+            if (titleText) {
+                titleText.innerText = text || '处理中...';
+                titleText.style.color = 'var(--text-main)';
+            }
+            if (bar) {
+                bar.style.width = '0%';
+                bar.style.backgroundColor = 'var(--primary)';
+            }
+            
+            // Show and reset mini log
+            if (miniLog) {
+                miniLog.style.display = 'block';
+                miniLog.innerHTML = ''; // clear previous logs
+            }
+            
+            document.getElementById('progress-text').innerText = '';
+            
+            el.style.display = 'flex';
+        } else {
+            el.style.display = 'none';
+        }
+    }
+
+    function toggleLogModal(show) {
+        const modal = document.getElementById('log-modal');
+        const content = document.getElementById('log-modal-content');
+        const source = document.getElementById('log-output');
+        
+        if (show) {
+            content.innerHTML = source.innerHTML;
+            modal.style.display = 'flex';
+        } else {
+            modal.style.display = 'none';
+        }
+    }
+
+    // Auto-sync logs to modal if open
+    const originalLog = log;
+    log = function(level, msg) {
+        originalLog(level, msg);
+        const modal = document.getElementById('log-modal');
+        if (modal.style.display !== 'none') {
+            const content = document.getElementById('log-modal-content');
+            const div = document.createElement('div');
+            div.className = 'log-entry';
+            const time = new Date().toLocaleTimeString();
+            let colorClass = '';
+            if (level === 'error') colorClass = 'log-error';
+            if (level === 'success') colorClass = 'log-success';
+            if (level === 'info') colorClass = 'log-info';
+            div.innerHTML = `<span style="color:#64748b">[${time}]</span> <span class="${colorClass}">${msg}</span>`;
+            content.appendChild(div);
+            content.scrollTop = content.scrollHeight;
+        }
+    }
+
+    function updateProgress(value, text) {
+        const bar = document.getElementById('progress-bar-fill');
+        const txt = document.getElementById('progress-text');
+        if (bar) bar.style.width = value + '%';
+        if (txt && text) txt.innerText = text + ` (${value}%)`;
+    }
+
+    function downloadReport() {
+        if (!currentJobId) {
+            alert('暂无任务记录');
+            return;
+        }
+        window.open(`/api/report?job_id=${currentJobId}`);
+    }
+
+    function checkUpdates() {
+        window.open('https://github.com/unknown/repo/releases');
+    }
+
+    // --- New Features (Recent Envs & Stop) ---
+
+    async function loadRecentEnvs() {
+        const container = document.getElementById('recent-envs-list');
+        const card = document.getElementById('recent-envs-card');
+        try {
+            const res = await fetch('/api/recent_envs');
+            const data = await res.json();
+            
+            if (!data.envs || data.envs.length === 0) {
+                card.style.display = 'none';
+                return;
+            }
+
+            card.style.display = 'block';
+            container.innerHTML = data.envs.map(env => `
+                <div class="plugin-item">
+                    <div style="display:flex; flex-direction:column;">
+                        <span class="plugin-name">${env.env_name || '未命名环境'} <span style="font-weight:normal; font-size:0.8rem; color:var(--text-sub);">(${env.type})</span></span>
+                        <span style="font-size:0.75rem; color:var(--text-sub);">${env.env_path || ''}</span>
+                    </div>
+                    <button class="btn-mini" style="border-color:var(--danger); color:var(--danger);" onclick="deleteRecentEnv(this, '${env.env_name || ''}', '${(env.env_path || '').replace(/\\/g, '\\\\')}', '${env.type}')">🗑️ 删除</button>
+                </div>
+            `).join('');
+        } catch (e) {
+            console.error('Failed to load recent envs', e);
+        }
+    }
+
+    async function deleteRecentEnv(btn, name, path, type) {
+        if (!confirm(`确定要删除环境 "${name}" 吗？\n这将物理删除文件夹: ${path}`)) return;
+        
+        const originalText = btn.innerText;
+        btn.innerText = '删除中...';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch('/api/delete_recent_env', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ env_name: name, env_path: path, type: type })
+            });
+            const data = await res.json();
+            alert(data.message);
+            loadRecentEnvs();
+        } catch (e) {
+            alert('删除失败: ' + e.message);
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    async function stopCurrentJob() {
+        if (!currentJobId) return;
+        if (!confirm('确定要停止当前任务吗？可能导致环境残留。')) return;
+        
+        const btn = document.getElementById('loading-stop-btn');
+        if(btn) btn.innerText = '正在停止...';
+        
+        try {
+            await fetch('/api/stop_job', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ job_id: currentJobId })
+            });
+            log('warning', '已发送停止指令...');
+        } catch (e) {
+            alert('无法发送停止指令: ' + e.message);
+        }
+    }
+
+</script>
+</body>
+</html>
