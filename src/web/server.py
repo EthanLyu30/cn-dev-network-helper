@@ -21,9 +21,15 @@ from ..modules.go import set_go_proxy
 from ..modules.docker import set_docker_mirror
 from ..modules.hosts import update_github_hosts
 from ..modules.proxy_tools import generate_terminal_proxy_commands, generate_lan_proxy_guide
+from ..modules.templates import list_templates, apply_template
+from ..modules.plugins import list_plugins, run_plugin
+from ..modules.updater import check_for_updates
+from ..modules.env_manager import analyze_project_path, create_venv_and_install, create_conda_and_install, quick_install_pkg, install_suite, get_system_info, get_all_suites
 
 PORT = 8000
 WEB_ROOT = os.path.join(os.path.dirname(__file__), 'static')
+APP_VERSION = os.environ.get("APP_VERSION") or "4.0.0"
+UPDATE_INFO = None
 
 JOBS = {}
 JOBS_LOCK = threading.Lock()
@@ -51,6 +57,13 @@ def _relaunch_web_as_admin():
 
 def _now_ms():
     return int(time.time() * 1000)
+
+def _refresh_update_info():
+    global UPDATE_INFO
+    try:
+        UPDATE_INFO = check_for_updates(APP_VERSION, timeout=2)
+    except Exception:
+        UPDATE_INFO = None
 
 def _new_job(action, params):
     job_id = uuid.uuid4().hex
@@ -188,6 +201,83 @@ def _run_job(job_id):
             _finish_job(job, {'message': '局域网共享向导已生成', 'output': _strip_ansi(output)})
             return
 
+        if action == 'apply_template':
+            template_key = params.get('template') or params.get('name')
+            port = params.get('port') or detect_proxy_port()
+            mode = params.get('mode')
+            _log(job, 'info', f'应用模板: {template_key}')
+            _set_progress(job, 20, '应用模板')
+            result, output = _capture_stdout(apply_template, template_key, port, mode)
+            _log_captured_output(job, output)
+            _finish_job(job, {'message': '模板已应用', 'result': result})
+            return
+
+        if action == 'plugin_run':
+            name = params.get('name') or params.get('plugin')
+            port = params.get('port') or detect_proxy_port()
+            _log(job, 'info', f'运行插件: {name}')
+            _set_progress(job, 20, '运行插件')
+            ctx = {'port': str(port), 'platform': sys.platform, 'cwd': os.getcwd()}
+            result, output = _capture_stdout(run_plugin, name, ctx)
+            _log_captured_output(job, output)
+            _finish_job(job, {'message': '插件已运行', 'result': result})
+            return
+
+        if action == 'analyze_project':
+            path = params.get('path')
+            _log(job, 'info', f'正在分析项目路径: {path}')
+            _set_progress(job, 30, '扫描依赖文件')
+            try:
+                result = analyze_project_path(path)
+                _log(job, 'success', f'分析完成: 找到 {len(result["deps"])} 个依赖配置')
+                _finish_job(job, {'message': '分析完成', 'analysis': result})
+            except Exception as e:
+                _fail_job(job, str(e))
+            return
+
+        if action == 'install_project':
+            path = params.get('path')
+            env_type = params.get('envType')
+            _log(job, 'info', f'开始构建环境: {env_type} -> {path}')
+            _set_progress(job, 10, '初始化环境')
+            
+            if env_type == 'conda':
+                msg, output = _capture_stdout(create_conda_and_install, path)
+            else:
+                msg, output = _capture_stdout(create_venv_and_install, path)
+            
+            _log_captured_output(job, output)
+            _finish_job(job, {'message': msg})
+            return
+
+        if action == 'quick_install':
+            pkg = params.get('pkg')
+            _log(job, 'info', f'快速安装: {pkg}')
+            _set_progress(job, 10, '下载安装中')
+            msg, output = _capture_stdout(quick_install_pkg, pkg)
+            _log_captured_output(job, output)
+            _finish_job(job, {'message': msg})
+            return
+
+        if action == 'install_suite':
+            suite = params.get('suite')
+            target = params.get('target')
+            env_name = params.get('env_name')
+            custom_packages = params.get('custom_packages')
+            
+            _log(job, 'info', f'正在安装套件: {suite} -> {target}')
+            if custom_packages:
+                _log(job, 'info', f'自定义包列表 ({len(custom_packages)}个): {", ".join(custom_packages[:5])}...')
+                 
+            _set_progress(job, 10, '初始化环境与依赖')
+            try:
+                msg, output = _capture_stdout(install_suite, suite, target, env_name, custom_packages)
+                _log_captured_output(job, output)
+                _finish_job(job, {'message': msg})
+            except Exception as e:
+                _fail_job(job, str(e))
+            return
+
         if action == 'apply_config':
             module = params.get('module')
             mode = params.get('mode')
@@ -261,7 +351,58 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         if self.path.startswith('/api/status'):
-            body = json.dumps({'is_admin': _is_admin(), 'platform': sys.platform}, ensure_ascii=False).encode('utf-8')
+            body = json.dumps(
+                {
+                    'is_admin': _is_admin(),
+                    'platform': sys.platform,
+                    'version': APP_VERSION,
+                    'update': UPDATE_INFO,
+                },
+                ensure_ascii=False,
+            ).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.end_headers()
+            self.wfile.write(body)
+            return
+
+        if self.path.startswith('/api/sys_info'):
+            info = get_system_info()
+            body = json.dumps({'info': info}, ensure_ascii=False).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.end_headers()
+            self.wfile.write(body)
+            return
+
+        if self.path.startswith('/api/suite_details'):
+            qs = urllib.parse.urlparse(self.path).query
+            params = urllib.parse.parse_qs(qs)
+            suite_name = (params.get('suite') or [''])[0]
+            
+            suites = get_all_suites()
+            if suite_name and suite_name in suites:
+                data = suites[suite_name]
+            else:
+                data = {'error': 'suite not found'}
+                
+            body = json.dumps(data, ensure_ascii=False).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.end_headers()
+            self.wfile.write(body)
+            return
+
+        if self.path.startswith('/api/templates'):
+            body = json.dumps({'templates': list_templates()}, ensure_ascii=False).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.end_headers()
+            self.wfile.write(body)
+            return
+
+        if self.path.startswith('/api/plugins'):
+            body = json.dumps({'plugins': list_plugins()}, ensure_ascii=False).encode('utf-8')
             self.send_response(200)
             self.send_header('Content-Type', 'application/json; charset=utf-8')
             self.end_headers()
@@ -335,7 +476,12 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(body)
             return
 
-        return super().do_GET()
+        try:
+            return super().do_GET()
+        except (ConnectionAbortedError, ConnectionResetError, BrokenPipeError):
+            pass
+        except Exception:
+            pass
 
     def do_POST(self):
         if self.path.startswith('/api/'):
@@ -361,7 +507,7 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
         if action == 'start_job':
             job_action = data.get('action')
             params = data.get('params') or {}
-            allowed = {'detect_port', 'apply_config', 'update_hosts', 'terminal_proxy', 'lan_guide'}
+            allowed = {'detect_port', 'apply_config', 'update_hosts', 'terminal_proxy', 'lan_guide', 'apply_template', 'plugin_run', 'analyze_project', 'install_project', 'quick_install', 'install_suite'}
             if job_action not in allowed:
                 return {'status': 'error', 'error': 'unsupported action'}
             job = _new_job(job_action, params)
@@ -423,6 +569,9 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, format, *args):
         pass
 
+class ThreadingTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    pass
+
 def launch_web_ui():
     Handler = RequestHandler
     print(f"正在启动 Web 界面: http://localhost:{PORT}")
@@ -430,8 +579,10 @@ def launch_web_ui():
     
     # Open browser automatically
     webbrowser.open(f"http://localhost:{PORT}")
+
+    threading.Thread(target=_refresh_update_info, daemon=True).start()
     
-    with socketserver.TCPServer(("", PORT), Handler) as httpd:
+    with ThreadingTCPServer(("", PORT), Handler) as httpd:
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:

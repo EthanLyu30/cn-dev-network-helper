@@ -2,6 +2,7 @@ import sys
 import argparse
 import os
 import ctypes
+import threading
 from src.core.utils import Colors, detect_proxy_port, recommend_config, ProgressBar
 from src.core.backup import backup_all
 from src.modules.git import set_git_proxy, unset_git_proxy, diagnose_git_github
@@ -14,6 +15,11 @@ from src.modules.go import set_go_proxy, unset_go_proxy
 from src.modules.docker import set_docker_mirror
 from src.modules.hosts import update_github_hosts
 from src.modules.proxy_tools import generate_terminal_proxy_commands, generate_lan_proxy_guide
+from src.modules.templates import list_templates, apply_template
+from src.modules.plugins import list_plugins, run_plugin
+from src.modules.updater import check_for_updates
+
+APP_VERSION = "4.0.0"
 
 def _is_admin():
     if os.name != "nt":
@@ -34,12 +40,24 @@ def _relaunch_as_admin():
     except Exception:
         return False
 
+def _maybe_print_update():
+    info = check_for_updates(APP_VERSION, timeout=2)
+    if not info:
+        return
+    if info.get("available"):
+        Colors.print_warning(f"发现新版本: {info.get('latest_tag')}（当前 {APP_VERSION}）")
+        if info.get("url"):
+            Colors.print_info(f"更新地址: {info.get('url')}")
+
 def main():
     parser = argparse.ArgumentParser(description="全能开发环境网络助手")
     parser.add_argument("--web", action="store_true", help="启动 Web 可视化界面 (推荐)")
     args = parser.parse_args()
 
+    threading.Thread(target=_maybe_print_update, daemon=True).start()
+
     if args.web:
+        os.environ["APP_VERSION"] = APP_VERSION
         if os.name == "nt" and not _is_admin():
             ok = _relaunch_as_admin()
             if ok:
@@ -55,13 +73,15 @@ def main():
             return
 
     while True:
-        Colors.print_header("全能网络配置助手 v3.0 (All-in-One)")
+        Colors.print_header(f"全能网络配置助手 v{APP_VERSION} (All-in-One)")
         print("1. [智能推荐] 自动检测 + 测速 + 推荐配置 (Python/Git)")
         print("2. [Python] 配置 Pip/Conda (镜像/代理)")
         print("3. [Node.js] 配置 Npm/Yarn (镜像/代理)")
         print("4. [其他] 配置 Git / Go / Docker")
         print("5. [工具] 备份 / 诊断 / Hosts / 代理工具")
         print("6. [还原] 清除所有配置")
+        print("7. [模板] 一键环境初始化 (Deep Learning/Web Dev)")
+        print("8. [插件] 运行自定义脚本扩展功能")
         print("0. 退出")
         
         choice = input(f"\n{Colors.BOLD}请输入选项: {Colors.ENDC}").strip().lower()
@@ -143,6 +163,36 @@ def main():
             unset_node_config()
             unset_go_proxy()
             Colors.print_success("所有配置已清除")
+
+        elif choice == '7':
+            items = list_templates()
+            print("\n--- 一键环境初始化模板 ---")
+            for idx, item in enumerate(items, start=1):
+                print(f"{idx}. {item['label']} ({item['key']}) - {item['description']}")
+            sub = input("请选择: ").strip()
+            if sub.isdigit():
+                i = int(sub)
+                if 1 <= i <= len(items):
+                    tmpl = items[i - 1]["key"]
+                    backup_all()
+                    res = apply_template(tmpl, detect_proxy_port())
+                    Colors.print_success(f"模板已应用: {res.get('label')}")
+
+        elif choice == '8':
+            print("\n--- 插件系统 ---")
+            plugins = list_plugins()
+            if not plugins:
+                Colors.print_warning("未发现插件。将 .py 脚本放到项目根目录的 plugins/ 目录即可。")
+            else:
+                for idx, p in enumerate(plugins, start=1):
+                    print(f"{idx}. {p['name']}")
+                sub = input("请选择要运行的插件: ").strip()
+                if sub.isdigit():
+                    i = int(sub)
+                    if 1 <= i <= len(plugins):
+                        name = plugins[i - 1]["name"]
+                        ctx = {"port": detect_proxy_port(), "platform": sys.platform, "cwd": os.getcwd()}
+                        run_plugin(name, ctx)
             
         input("\n按回车键继续...")
 

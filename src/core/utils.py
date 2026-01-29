@@ -123,7 +123,7 @@ def detect_proxy_port():
     common_ports = [7890, 7897, 1080, 10808, 10809, 8888, 8889, 9999]
     for port in common_ports:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(0.5)
+            s.settimeout(0.05)
             if s.connect_ex(('127.0.0.1', port)) == 0:
                 Colors.print_success(f"检测到活跃端口: {port}")
                 return str(port)
