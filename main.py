@@ -1,5 +1,7 @@
 import sys
 import argparse
+import os
+import ctypes
 from src.core.utils import Colors, detect_proxy_port, recommend_config, ProgressBar
 from src.core.backup import backup_all
 from src.modules.git import set_git_proxy, unset_git_proxy, diagnose_git_github
@@ -13,12 +15,37 @@ from src.modules.docker import set_docker_mirror
 from src.modules.hosts import update_github_hosts
 from src.modules.proxy_tools import generate_terminal_proxy_commands, generate_lan_proxy_guide
 
+def _is_admin():
+    if os.name != "nt":
+        return False
+    try:
+        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+    except Exception:
+        return False
+
+def _relaunch_as_admin():
+    if os.name != "nt":
+        return False
+    script_path = os.path.abspath(__file__)
+    params = f"\"{script_path}\" --web"
+    try:
+        rc = ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, params, os.getcwd(), 1)
+        return int(rc) > 32
+    except Exception:
+        return False
+
 def main():
     parser = argparse.ArgumentParser(description="全能开发环境网络助手")
     parser.add_argument("--web", action="store_true", help="启动 Web 可视化界面 (推荐)")
     args = parser.parse_args()
 
     if args.web:
+        if os.name == "nt" and not _is_admin():
+            ok = _relaunch_as_admin()
+            if ok:
+                return
+            Colors.print_warning("无法自动以管理员权限启动 Web（可能被策略/环境限制）")
+            Colors.print_info("请用 Windows Terminal(管理员) 运行：python main.py --web")
         try:
             from src.web.server import launch_web_ui
             launch_web_ui()

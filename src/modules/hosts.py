@@ -1,12 +1,25 @@
 import os
 import platform
 import urllib.request
+import ctypes
 from src.core.utils import Colors
 
 # Remote Hosts Source (Using GitHub520)
 HOSTS_URL = "https://raw.githubusercontent.com/521xueweihan/GitHub520/main/hosts"
 START_MARKER = "# Start GitHub520 Host"
 END_MARKER = "# End GitHub520 Host"
+
+def is_admin():
+    system = platform.system()
+    if system == "Windows":
+        try:
+            return bool(ctypes.windll.shell32.IsUserAnAdmin())
+        except Exception:
+            return False
+    try:
+        return os.geteuid() == 0
+    except Exception:
+        return False
 
 def get_hosts_path():
     """Returns the path to the system hosts file."""
@@ -36,7 +49,11 @@ def update_github_hosts():
         Colors.print_error(f"找不到系统 Hosts 文件: {hosts_path}")
         return False
 
-    # Check permissions
+    if platform.system() == "Windows" and not is_admin():
+        Colors.print_warning(f"需要管理员权限才能写入 Hosts 文件: {hosts_path}")
+        Colors.print_info("请以【管理员身份】运行此脚本/终端后重试")
+        return False
+
     if not os.access(hosts_path, os.W_OK):
         Colors.print_warning(f"没有权限写入 Hosts 文件: {hosts_path}")
         if platform.system() == "Windows":

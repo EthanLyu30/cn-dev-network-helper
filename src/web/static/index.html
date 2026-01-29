@@ -136,6 +136,20 @@
             font-size: 0.85rem;
             color: var(--text-secondary);
         }
+        pre.log {
+            background: #0b1220;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 14px;
+            margin: 0;
+            max-height: 240px;
+            overflow: auto;
+            font-size: 0.85rem;
+            line-height: 1.35rem;
+            color: #dbeafe;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
     </style>
 </head>
 <body>
@@ -143,7 +157,7 @@
 <div class="container">
     <header>
         <h1>🇨🇳 全能开发环境助手</h1>
-        <p class="subtitle">v3.3 | Web 可视化版 | 无需依赖</p>
+        <p class="subtitle">v3.4 | Web 可视化版 | 无需依赖</p>
     </header>
 
     <div id="loading-box" class="card" style="display:none;">
@@ -227,6 +241,36 @@
                 </div>
             </div>
         </div>
+
+        <div class="card module-card">
+            <h3><span class="icon">🧰</span> 工具箱</h3>
+            <div class="actions">
+                <div class="action-btn" onclick="runTool('update_hosts')">
+                    <span>更新 GitHub Hosts</span>
+                    <span class="tag">抗 DNS 污染</span>
+                </div>
+                <div class="action-btn" onclick="relaunchAsAdmin()">
+                    <span>以管理员重启 Web（写 Hosts）</span>
+                    <span id="admin-tag" class="tag">检测中</span>
+                </div>
+                <div class="action-btn" onclick="runTool('terminal_proxy')">
+                    <span>生成终端代理命令</span>
+                    <span class="tag">临时生效</span>
+                </div>
+                <div class="action-btn" onclick="runTool('lan_guide')">
+                    <span>生成局域网共享向导</span>
+                    <span class="tag">手机/虚拟机</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="control-group" style="justify-content: space-between; margin-bottom: 12px;">
+            <div style="font-weight: 700;">🧾 操作日志</div>
+            <button class="secondary" onclick="downloadReport()">⬇ 导出诊断报告</button>
+        </div>
+        <pre id="log-output" class="log"></pre>
     </div>
 </div>
 
@@ -236,12 +280,28 @@
     let loadingTimer = null;
     let loadingStartAt = 0;
     let loadingEstimateMs = 0;
+    let currentJobId = null;
+    let currentJobContext = null;
+    let sse = null;
 
     function stopLoadingProgress() {
         if (loadingTimer) {
             clearInterval(loadingTimer);
             loadingTimer = null;
         }
+    }
+
+    function resetLog() {
+        const el = document.getElementById('log-output');
+        el.innerText = '';
+    }
+
+    function appendLog(level, message, tsMs) {
+        const el = document.getElementById('log-output');
+        const t = tsMs ? new Date(tsMs).toLocaleTimeString() : new Date().toLocaleTimeString();
+        const line = `[${t}] [${level}] ${message}\n`;
+        el.innerText += line;
+        el.scrollTop = el.scrollHeight;
     }
 
     function renderLoadingProgress(elapsedMs) {
@@ -275,6 +335,28 @@
         }, 150);
     }
 
+    function beginRealLoading(title) {
+        stopLoadingProgress();
+        document.getElementById('loading-title').innerText = title;
+        document.getElementById('loading-box').style.display = 'block';
+        document.getElementById('loading-bar').style.width = '0%';
+        document.getElementById('loading-percent').innerText = '0%';
+        document.getElementById('loading-eta').innerText = '进行中';
+    }
+
+    function updateRealLoading(percent, title) {
+        const barEl = document.getElementById('loading-bar');
+        const percentEl = document.getElementById('loading-percent');
+        const etaEl = document.getElementById('loading-eta');
+        const p = Math.max(0, Math.min(100, Math.floor(percent)));
+        barEl.style.width = `${p}%`;
+        percentEl.innerText = `${p}%`;
+        if (title) {
+            document.getElementById('loading-title').innerText = title;
+            etaEl.innerText = title;
+        }
+    }
+
     function finishLoadingProgress() {
         stopLoadingProgress();
         const barEl = document.getElementById('loading-bar');
@@ -288,38 +370,105 @@
         }, 250);
     }
 
-    async function detectPort() {
-        startLoadingProgress('正在检测端口', 2);
-        try {
-            const res = await fetch('/api/detect_port', { method: 'POST', body: '{}' });
-            const data = await res.json();
-            if (data.status === 'success') {
-                document.getElementById('port-input').value = data.port;
-                showToast(`检测到端口: ${data.port}`);
-            } else {
-                finishLoadingProgress();
+    function connectSSE(jobId) {
+        if (sse) {
+            try { sse.close(); } catch (e) {}
+            sse = null;
+        }
+        sse = new EventSource(`/api/stream?job_id=${encodeURIComponent(jobId)}`);
+        sse.onmessage = (evt) => {
+            let data = null;
+            try { data = JSON.parse(evt.data); } catch (e) { return; }
+            if (!data || !data.type) return;
+
+            if (data.type === 'progress') {
+                updateRealLoading(data.value, data.title);
+                return;
             }
+
+            if (data.type === 'log') {
+                appendLog(data.level, data.message, data.ts_ms);
+                return;
+            }
+
+            if (data.type === 'done') {
+                const result = data.result || {};
+                if (currentJobContext && currentJobContext.kind === 'detect_port') {
+                    if (result.port) document.getElementById('port-input').value = result.port;
+                    showToast(result.port ? `检测到端口: ${result.port}` : '检测完成');
+                } else if (currentJobContext && currentJobContext.kind === 'apply_config') {
+                    showToast(result.message || '配置完成');
+                } else if (currentJobContext && currentJobContext.kind === 'update_hosts') {
+                    showToast(result.message || 'Hosts 更新完成');
+                } else if (currentJobContext && (currentJobContext.kind === 'terminal_proxy' || currentJobContext.kind === 'lan_guide')) {
+                    showToast(result.message || '生成完成');
+                    if (result.output) appendLog('info', result.output);
+                } else {
+                    showToast('操作完成');
+                }
+                try { sse.close(); } catch (e) {}
+                sse = null;
+                return;
+            }
+
+            if (data.type === 'error') {
+                appendLog('error', data.error || 'unknown error');
+                showToast(data.error || '操作失败', true);
+                try { sse.close(); } catch (e) {}
+                sse = null;
+                return;
+            }
+        };
+        sse.onerror = () => {
+            appendLog('error', 'SSE 连接中断');
+        };
+    }
+
+    async function startJob(kind, params) {
+        currentJobId = null;
+        currentJobContext = { kind, params };
+        resetLog();
+        beginRealLoading(kind === 'detect_port' ? '正在检测端口' : '正在执行');
+        appendLog('info', `开始任务: ${kind}`);
+        try {
+            const res = await fetch('/api/start_job', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: kind, params })
+            });
+            const data = await res.json();
+            if (data.status !== 'started' || !data.job_id) {
+                showToast(data.error || '启动任务失败', true);
+                return;
+            }
+            currentJobId = data.job_id;
+            connectSSE(currentJobId);
         } catch (e) {
-            showToast("检测失败", true);
+            showToast('启动任务失败', true);
         }
     }
 
+    async function detectPort() {
+        return startJob('detect_port', {});
+    }
+
     async function applyConfig(module, mode) {
-        startLoadingProgress('正在应用配置', 6);
         const port = document.getElementById('port-input').value;
-        const payload = { module, mode, port };
-        
-        try {
-            const res = await fetch('/api/apply_config', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-            showToast(data.message);
-        } catch (e) {
-            showToast("操作失败", true);
+        return startJob('apply_config', { module, mode, port });
+    }
+
+    async function runTool(action) {
+        const port = document.getElementById('port-input').value;
+        if (action === 'update_hosts') {
+            return startJob('update_hosts', {});
         }
+        if (action === 'terminal_proxy') {
+            return startJob('terminal_proxy', { port });
+        }
+        if (action === 'lan_guide') {
+            return startJob('lan_guide', { port });
+        }
+        return showToast('未知工具', true);
     }
 
     function showToast(msg, isError = false) {
@@ -330,9 +479,63 @@
         toast.classList.add('show');
         setTimeout(() => toast.classList.remove('show'), 3000);
     }
+
+    function downloadReport() {
+        if (!currentJobId) {
+            showToast('暂无可导出的报告', true);
+            return;
+        }
+        window.open(`/api/report?job_id=${encodeURIComponent(currentJobId)}`, '_blank');
+    }
+
+    async function refreshAdminStatus() {
+        const tag = document.getElementById('admin-tag');
+        if (!tag) return;
+        try {
+            const res = await fetch('/api/status');
+            const data = await res.json();
+            if (data && data.is_admin === true) {
+                tag.innerText = '已是管理员';
+                tag.classList.add('rec');
+            } else {
+                tag.innerText = '需要管理员';
+                tag.classList.remove('rec');
+            }
+        } catch (e) {
+            tag.innerText = '未知';
+            tag.classList.remove('rec');
+        }
+    }
+
+    async function relaunchAsAdmin() {
+        resetLog();
+        beginRealLoading('请求管理员重启');
+        appendLog('info', '请求以管理员权限重启 Web（将弹出 UAC）');
+        try {
+            const res = await fetch('/api/relaunch_admin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                showToast('已发起管理员重启，请在 UAC 弹窗点“是”');
+                appendLog('info', '服务将自动退出并由管理员实例接管，请稍后刷新页面');
+            } else {
+                showToast(data.error || '管理员重启失败', true);
+                appendLog('error', data.error || '管理员重启失败');
+            }
+        } catch (e) {
+            showToast('管理员重启失败', true);
+        }
+        setTimeout(() => {
+            try { window.location.reload(); } catch (e) {}
+        }, 1200);
+    }
     
     // Auto detect on load
     detectPort();
+    refreshAdminStatus();
 </script>
 
 </body>
